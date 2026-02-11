@@ -1,20 +1,33 @@
 const mongoose = require('mongoose');
 
+let isConnected = false;
+
 const connectDB = async () => {
+    mongoose.set('strictQuery', true);
+
+    if (isConnected) {
+        console.log('Using existing MongoDB connection');
+        return;
+    }
+
     try {
-        const uri = process.env.MONGO_URI || 'mongodb://localhost:27017/trackandgrow';
-        const options = {
-            // Recommended for MongoDB Atlas / cluster
+        if (!process.env.MONGO_URI) {
+            console.error("MONGO_URI is missing");
+            return;
+        }
+
+        const conn = await mongoose.connect(process.env.MONGO_URI, {
             retryWrites: true,
             w: 'majority',
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 10000,
-        };
-        const conn = await mongoose.connect(uri, options);
+        });
+
+        isConnected = conn.connections[0].readyState;
         console.log(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
-        console.error(`MongoDB connection error: ${error.message}`);
-        process.exit(1);
+        console.error('MongoDB connection error:', error.message);
+        // Don't exit process on Vercel
     }
 };
 
