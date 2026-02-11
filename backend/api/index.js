@@ -36,8 +36,13 @@ app.use(express.json());
 
 // Middleware to ensure DB connection
 app.use(async (req, res, next) => {
-    await connectDB();
-    next();
+    try {
+        await connectDB();
+        next();
+    } catch (err) {
+        console.error('DB Connection Failed in Middleware:', err);
+        res.status(503).json({ message: 'Database connection failed', error: err.message });
+    }
 });
 
 app.get('/', (req, res) => {
@@ -50,5 +55,15 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/activity', activityRoutes);
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Unhandled Error:', err);
+    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    res.status(statusCode);
+    res.json({
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack,
+    });
+});
 
 module.exports = app;
